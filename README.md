@@ -24,3 +24,17 @@ As part of this process however, you should look to refactor some of the code in
 Once you have completed test, zip up your solution, excluding any build artifacts to reduce the size, and email it back to our recruitment team.
 
 Good luck!
+
+_________________________________________________
+
+Additional notes:
+
+- Changed code style to that of private fields being in the format of -> '_privateField'
+- Added summary comments for public methods and properties
+- Refactored some existing variable names to be more detailed and less abstract in meaning.
+- Added checks for null accounts, empty guid ids of accounts.
+- For the purposes of this task, I've assumed that all amounts in question are in Pounds Sterling.
+- Left certain properties as constants as opposed to configurable variables for the purposes of this task. For example, it would be better to have say the 'PayInLimit' be confgurable for any given account, depending on a user's needs.
+- For this task, I've simply printed a console line stated for the notification system, as opposed to implementing sending an email to a given user.
+- Simply used a dictionary to hold the accounts in the account repository, as opposed to a more data persisted approach with a database.
+- Added unit tests to test different cases where certain exceptions are expected, in addition to successful feature test scenarios.

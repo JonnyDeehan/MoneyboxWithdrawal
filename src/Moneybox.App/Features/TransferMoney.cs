@@ -4,52 +4,79 @@ using System;
 
 namespace Moneybox.App.Features
 {
+    /// <summary>
+    /// Operations for transfering money from one account to another
+    /// </summary>
     public class TransferMoney
     {
-        private IAccountRepository accountRepository;
-        private INotificationService notificationService;
+        #region Fields
 
+        private IAccountRepository _accountRepository;
+        private INotificationService _notificationService;
+
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="accountRepository">The data accessor for accounts</param>
+        /// <param name="notificationService">A notification service provider</param>
         public TransferMoney(IAccountRepository accountRepository, INotificationService notificationService)
         {
-            this.accountRepository = accountRepository;
-            this.notificationService = notificationService;
+            _accountRepository = accountRepository;
+            _notificationService = notificationService;
         }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Transfers the provided amount from one account to another, as per
+        /// the account ids provided.
+        /// </summary>
+        /// <param name="fromAccountId">The source account id</param>
+        /// <param name="toAccountId">The destination account id</param>
+        /// <param name="amount">The amount of money to transfer in pounds sterling</param>
         public void Execute(Guid fromAccountId, Guid toAccountId, decimal amount)
         {
-            var from = this.accountRepository.GetAccountById(fromAccountId);
-            var to = this.accountRepository.GetAccountById(toAccountId);
+            var sourceAccount = _accountRepository.GetAccountById(fromAccountId);
+            var destinationAccount = _accountRepository.GetAccountById(toAccountId);
 
-            var fromBalance = from.Balance - amount;
-            if (fromBalance < 0m)
+            // Withdraw from the provided source account
+            sourceAccount.Withdraw(amount);
+
+            // Deposit into the provided destination account
+            destinationAccount.Deposit(amount);
+
+            // Update each respective account
+            _accountRepository.Update(sourceAccount);
+            _accountRepository.Update(destinationAccount);
+
+            try
             {
-                throw new InvalidOperationException("Insufficient funds to make transfer");
-            }
+                if (sourceAccount.AreAccountFundsLow())
+                {
+                    _notificationService.NotifyFundsLow(sourceAccount.User.Email);
+                }
 
-            if (fromBalance < 500m)
+                if (destinationAccount.IsAccountReachingPayInLimit())
+                {
+                    _notificationService.NotifyApproachingPayInLimit(destinationAccount.User.Email);
+                }
+            }
+            catch (NullReferenceException exception)
             {
-                this.notificationService.NotifyFundsLow(from.User.Email);
+                Console.WriteLine($"Unable to send notification to user - invalid user object for account. Exception: {exception}");
             }
-
-            var paidIn = to.PaidIn + amount;
-            if (paidIn > Account.PayInLimit)
+            catch (ArgumentNullException exception)
             {
-                throw new InvalidOperationException("Account pay in limit reached");
+                Console.WriteLine(exception.ToString());
             }
-
-            if (Account.PayInLimit - paidIn < 500m)
-            {
-                this.notificationService.NotifyApproachingPayInLimit(to.User.Email);
-            }
-
-            from.Balance = from.Balance - amount;
-            from.Withdrawn = from.Withdrawn - amount;
-
-            to.Balance = to.Balance + amount;
-            to.PaidIn = to.PaidIn + amount;
-
-            this.accountRepository.Update(from);
-            this.accountRepository.Update(to);
         }
+
+        #endregion
     }
 }
